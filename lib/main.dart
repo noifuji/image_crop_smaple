@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_crop_smaple/color_filter_screen.dart';
 
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,41 +21,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
-      theme: ThemeData(
-          primarySwatch: Colors.blue,
-          highlightColor: const Color(0xFFD0996F),
-          backgroundColor: const Color(0xFFFDF5EC),
-          canvasColor: const Color(0xFFFDF5EC),
-          textTheme: TextTheme(
-            headline5: ThemeData.light()
-                .textTheme
-                .headline5!
-                .copyWith(color: const Color(0xFFBC764A)),
-          ),
-          iconTheme: IconThemeData(
-            color: Colors.grey[600],
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFBC764A),
-            centerTitle: false,
-            foregroundColor: Colors.white,
-            actionsIconTheme: IconThemeData(color: Colors.white),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ButtonStyle(
-              backgroundColor: MaterialStateColor.resolveWith(
-                      (states) => const Color(0xFFBC764A)),
-            ),
-          ),
-          outlinedButtonTheme: OutlinedButtonThemeData(
-            style: ButtonStyle(
-              foregroundColor: MaterialStateColor.resolveWith(
-                    (states) => const Color(0xFFBC764A),
-              ),
-              side: MaterialStateBorderSide.resolveWith(
-                      (states) => const BorderSide(color: Color(0xFFBC764A))),
-            ),
-          )),
       home: const HomePage(title: 'Image Cropper Demo'),
     );
   }
@@ -73,8 +39,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  XFile? _pickedFile;
-  CroppedFile? _croppedFile;
+  XFile? _targetFile;
+  //CroppedFile? _croppedFile;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +68,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _body() {
-    if (_croppedFile != null || _pickedFile != null) {
+    if (_targetFile != null) {
       return _imageCard();
     } else {
       return _uploaderCard();
@@ -136,17 +102,9 @@ class _HomePageState extends State<HomePage> {
   Widget _image() {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    if (_croppedFile != null) {
-      final path = _croppedFile!.path;
-      return ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 0.8 * screenWidth,
-          maxHeight: 0.7 * screenHeight,
-        ),
-        child: kIsWeb ? Image.network(path) : Image.file(File(path)),
-      );
-    } else if (_pickedFile != null) {
-      final path = _pickedFile!.path;
+
+    if (_targetFile != null) {
+      final path = _targetFile!.path;
       return ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 0.8 * screenWidth,
@@ -171,16 +129,31 @@ class _HomePageState extends State<HomePage> {
           tooltip: 'Delete',
           child: const Icon(Icons.delete),
         ),
-        if (_croppedFile == null)
+       // if (_croppedFile == null)
           Padding(
             padding: const EdgeInsets.only(left: 32.0),
             child: FloatingActionButton(
+              heroTag: "btn1",
               onPressed: () {
                 _cropImage();
               },
               backgroundColor: const Color(0xFFBC764A),
               tooltip: 'Crop',
               child: const Icon(Icons.crop),
+            ),
+          ),
+       // if (_croppedFile == null)
+          Padding(
+            padding: const EdgeInsets.only(left: 32.0),
+            child: FloatingActionButton(
+              heroTag: "btn2",
+              onPressed: () async {
+                await _colorFilterImage();
+
+              },
+              backgroundColor: const Color(0xFFBC764A),
+              tooltip: 'Crop',
+              child: const Icon(Icons.filter),
             ),
           )
       ],
@@ -259,10 +232,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _cropImage() async {
-    if (_pickedFile != null) {
+    if (_targetFile != null) {
       final croppedFile = await ImageCropper().cropImage(
-        sourcePath: _pickedFile!.path,
-        compressFormat: ImageCompressFormat.jpg,
+        sourcePath: _targetFile!.path,
+        compressFormat: ImageCompressFormat.png,
         compressQuality: 100,
         uiSettings:[AndroidUiSettings(
             toolbarTitle: 'Cropper',
@@ -274,12 +247,41 @@ class _HomePageState extends State<HomePage> {
             title: 'Cropper',
           ),],
       );
+
+      print(croppedFile!.path);
       if (croppedFile != null) {
         setState(() {
-          _croppedFile = croppedFile;
+          _targetFile = XFile(croppedFile.path);
         });
       }
     }
+  }
+
+  Future<void> _colorFilterImage() async {
+    if(_targetFile==null) {
+      return;
+    }
+
+    var path;
+    if(_targetFile != null) {
+      path = _targetFile!.path;
+    }
+
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) {
+            return ColorFilterScreen(sourcePath: path);
+          },
+        ),
+      );
+
+
+      if (result != null) {
+        setState(() {
+          _targetFile = XFile(result);
+        });
+      }
+
   }
 
   Future<void> _uploadImage() async {
@@ -287,15 +289,14 @@ class _HomePageState extends State<HomePage> {
     await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _pickedFile = pickedFile;
+        _targetFile = pickedFile;
       });
     }
   }
 
   void _clear() {
     setState(() {
-      _pickedFile = null;
-      _croppedFile = null;
+      _targetFile = null;
     });
   }
 }
