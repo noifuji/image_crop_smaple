@@ -40,6 +40,7 @@ dependencies:
   image_cropper_for_web: ^0.0.4
   path_provider: ^2.0.11
   uuid: ^3.0.6
+  image_crop: ^0.4.0
 
 dev_dependencies:
   flutter_test:
